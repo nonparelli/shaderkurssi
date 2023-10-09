@@ -1,9 +1,8 @@
 Shader"Custom/Teht1"
 {
     Properties
-    {
-        _Color ("Color", Color) = (1,1,1,1)
-        //[KeywordEnum(Red,Green,Blue,Black)] _COLORKEYWORD("Help",Float) = 0
+    {   
+        [KeywordEnum(Red,Green,Blue,Black)] _COLORKEYWORD("Color",Float) = 0
        [KeywordEnum(Object,World,View)] _SPACE("Space",Float) = 0
     }
     SubShader
@@ -22,8 +21,13 @@ Shader"Custom/Teht1"
             {
                 "LightMode" = "UniversalForward"
             }
-
+            Cull Back
+            Blend One Zero
+            ZTest LEqual
+            ZWrite On
+            
             HLSLPROGRAM
+            
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #pragma vertex Vertex
             #pragma fragment Fragment
@@ -52,7 +56,18 @@ Shader"Custom/Teht1"
 
             float4 Fragment() : SV_TARGET
             {
-                //float4 col = 1;
+                float4 col = 1;
+                
+                #if _COLORKEYWORD_RED
+                return float4(1,0,0,1);
+                #elif _COLORKEYWORD_GREEN
+                return float4(0,1,0,1);
+                #elif _COLORKEYWORD_BLUE
+                return float4(0,0,1,1);
+                #elif _COLORKEYWORD_BLACK
+                return float4(0,0,0,1);
+                #endif
+                
                 return _Color;
             }
             ENDHLSL

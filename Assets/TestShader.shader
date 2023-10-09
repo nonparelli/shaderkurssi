@@ -37,6 +37,7 @@ Shader"Custom/TestShader"
             {
                 float4 positionHCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
+                //float4 normalHCS : NORMAL;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -46,11 +47,10 @@ Shader"Custom/TestShader"
             Varyings Vert(const Attributes input)
             {
                 Varyings output;
-
-                output.positionHCS = TransformObjectToHClip(input.positionOS);
-                //output.positionHCS = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_V, mul(UNITY_MATRIX_M, float4(input.positionOS,1))));
-                //output.positionWS = mul(UNITY_MATRIX_M,input.positionOS);
-                output.positionWS = TransformObjectToWorld(input.positionOS);
+                //output.positionHCS = TransformObjectToHClip(input.positionOS);
+                output.positionHCS = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_V, mul(UNITY_MATRIX_M, float4(input.positionOS,1))));
+                output.positionWS = mul(UNITY_MATRIX_M,input.positionOS);
+                //output.positionWS = TransformObjectToWorld(input.positionOS);
                 return output;
             }
 
