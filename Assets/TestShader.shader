@@ -7,8 +7,9 @@ Shader"Custom/TestShader"
 
     SubShader
     {
-        Tags { 
-            "RenderType"="Opaque" 
+        Tags
+        {
+            "RenderType"="Opaque"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "Geometry"
         }
@@ -22,12 +23,9 @@ Shader"Custom/TestShader"
             }
 
             HLSLPROGRAM
-            
-            
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #pragma vertex Vert
             #pragma fragment Frag
-            
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/core.hlsl"
 
             struct Attributes
             {
@@ -42,14 +40,16 @@ Shader"Custom/TestShader"
             };
 
             CBUFFER_START(UnityPerMaterial)
-            float4 _Color;
+                float4 _Color;
             CBUFFER_END
-        
+
             Varyings Vert(const Attributes input)
             {
                 Varyings output;
-    
+
                 output.positionHCS = TransformObjectToHClip(input.positionOS);
+                //output.positionHCS = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_V, mul(UNITY_MATRIX_M, float4(input.positionOS,1))));
+                //output.positionWS = mul(UNITY_MATRIX_M,input.positionOS);
                 output.positionWS = TransformObjectToWorld(input.positionOS);
                 return output;
             }
