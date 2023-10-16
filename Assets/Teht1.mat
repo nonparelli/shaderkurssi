@@ -25,7 +25,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _COLORKEYWORD_GREEN
+  - _COLORKEYWORD_RED
   - _SPACE_WORLD
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -104,6 +104,7 @@ Material:
     - _COLORKEYWORD: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
+    - _ColorKeyword: 0
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
