@@ -8,7 +8,13 @@ Shader "Custom/BlinnPhong"
     SubShader
     {
         Tags { "RenderType"="Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry" }
-        HLSLINCLUDE
+        Pass
+        {
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -20,30 +26,19 @@ Shader "Custom/BlinnPhong"
                 float3 normalWS : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
             };
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            
-            Varyings vert (Attributes input)
-            {
-                Varyings output;
-                output.positionHCS = TransformWorldToHClip(TransformObjectToWorld(input.positionOS.xyz) + float3(0, 1, 0));
-                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                return output;
-            }
-        
-        ENDHLSL
-        
-        Pass
-        {
-            HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            
             CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float _Shininess;
             CBUFFER_END
+            
+            Varyings vert (Attributes input)
+            {
+                Varyings output;
+                output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                return output;
+            }
             float4 BlinnPhong(const Varyings input)
             {
                 const Light mainLight = GetMainLight();
@@ -60,41 +55,5 @@ Shader "Custom/BlinnPhong"
             }
             ENDHLSL
         }
-Pass
-{
-    Name "Depth"
-    Tags { "LightMode" = "DepthOnly" }
-    
-    Cull Back
-    ZTest LEqual
-    ZWrite On
-    ColorMask R
-    
-    HLSLPROGRAM
-    
-    #pragma vertex DepthVert
-    #pragma fragment DepthFrag
-     // PITÄÄ OLLA RELATIVE PATH TIEDOSTOON!!!
-     #include "Common\DepthOnly.hlsl"
-     ENDHLSL
 }
-Pass
-{
-    Name "Normals"
-    Tags { "LightMode" = "DepthNormalsOnly" }
-    
-    Cull Back
-    ZTest LEqual
-    ZWrite On
-    
-    HLSLPROGRAM
-    
-    #pragma vertex DepthNormalsVert
-    #pragma fragment DepthNormalsFrag
-
-    #include "Common\DepthNormalsOnly.hlsl"
-    
-    ENDHLSL
-}
-    }
 }
