@@ -8,10 +8,7 @@ Shader "Custom/ProximityDeform"
     }
     SubShader
     {
-        Tags
-        {
-            "RenderType"="Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry"
-        }
+        Tags{"RenderType"="Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry"}
 
         Pass
         {
@@ -55,6 +52,43 @@ Shader "Custom/ProximityDeform"
             {
                 return _Color;
             }
+            
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "Depth"
+            Tags { "LightMode" = "DepthOnly" }
+            
+            Cull Back
+            ZTest LEqual
+            ZWrite On
+            ColorMask R
+            
+            HLSLPROGRAM
+            
+            #pragma vertex DepthVert
+            #pragma fragment DepthFrag
+            #include "Common/DepthOnly.hlsl"
+            
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "Normals"
+            Tags { "LightMode" = "DepthNormalsOnly" }
+            
+            Cull Back
+            ZTest LEqual
+            ZWrite On
+            
+            HLSLPROGRAM
+            
+            #pragma vertex DepthNormalsVert
+            #pragma fragment DepthNormalsFrag
+            #include "Common/DepthNormalsOnly.hlsl"
+            
             ENDHLSL
         }
     }
