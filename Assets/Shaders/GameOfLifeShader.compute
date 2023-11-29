@@ -1,65 +1,134 @@
 RWTexture2D<float4> State1;
 RWTexture2D<float4> State2;
-Texture2D<float4> State1Read;
-Texture2D<float4> State2Read;
-SamplerState samplerState1;
-SamplerState samplerState2;
+RWTexture2D<float1> State1Raw;
+RWTexture2D<float1> State2Raw;
 float4 CellColour;
 float4 DeadColour;
 float4 TextureSize;
-
-int LiveNeighbors(Texture2D<float4> OldState,SamplerState sampler, uint3 position)
+float Living; // these are so we can customise our display color.. not during runtime though atm
+float Dead;
+int LiveNeighbors(RWTexture2D<float4> OldState, uint3 position)
 {
-    int liveneighbors=0;
-    for(int i=position.x-1;i<=position.x+1;i++)
+    int liveNeighbors = 0;
+    int posX = position.x;
+    int posY = position.y;
+    // Our starting coords should be now bottom left pixel, top right if we were in the corner
+    for (int offsetX = -1; offsetX < 2;offsetX++) // cycle X
     {
-        for(int j=position.y-1;j<=position.y+1;j++)
+        for (int offsetY = -1; offsetY < 2; offsetY++) // cycle y
         {
-            if(!(i==position.x && j==position.y))
+            if(! (offsetX == 0 && offsetY == 0))
             {
-                int x = i;
-                int y = j;
-                if(i<0)
-                {x=TextureSize.x-1;}
-                if(j<0)
-                {y=TextureSize.y-1;}
-                
-                if(i>TextureSize.x-1)
-                { x=0; }
-                if(j>TextureSize.y-1)
-                { y=0; }
-                float2 check = {x,y};
-                if( OldState.Sample(sampler,check)== CellColour)
-                {
-                    liveneighbors++;
-                } 
+                int x = posX+offsetX;
+                int y = posY+offsetY;
+                // underflows
+                if (posX+offsetX < 0)
+                { x = TextureSize.x - 1; }
+                if (posY+offsetY < 0)
+                { y = TextureSize.y - 1; }
+
+                //overflows
+                if (posX+offsetX > TextureSize.x - 1)
+                { x = 0; }
+                if (posY+offsetY > TextureSize.y - 1)
+                { y = 0; }
+                float check =OldState[uint2(x,y)].r+OldState[uint2(x,y)].g+OldState[uint2(x,y)].b+OldState[uint2(x,y)].a;
+                if(check != Dead)
+                    liveNeighbors++;
             }
         }
     }
-    return  liveneighbors;
+    return liveNeighbors;
 }
 
-float4 CellSim(RWTexture2D<float4> NewState,Texture2D<float4> OldState,SamplerState sampler,uint3 position)
+int LiveNeighbors2(RWTexture2D<float1> OldState, uint3 position)
+{
+    int liveNeighbors = 0;
+    int posX = position.x;
+    int posY = position.y;
+    // Our starting coords should be now bottom left pixel, top right if we were in the corner
+    for (int offsetX = -1; offsetX < 2;offsetX++) // cycle X
+        {
+        for (int offsetY = -1; offsetY < 2; offsetY++) // cycle y
+            {
+            if(! (offsetX == 0 && offsetY == 0))
+            {
+                int x = posX+offsetX;
+                int y = posY+offsetY;
+                // underflows
+                if (posX+offsetX < 0)
+                { x = TextureSize.x - 1; }
+                if (posY+offsetY < 0)
+                { y = TextureSize.y - 1; }
+
+                //overflows
+                if (posX+offsetX > TextureSize.x - 1)
+                { x = 0; }
+                if (posY+offsetY > TextureSize.y - 1)
+                { y = 0; }
+                if(OldState[uint2(x,y)] != 0)
+                    liveNeighbors++;
+            }
+            }
+        }
+    return liveNeighbors;
+}
+
+float4 CellSim(RWTexture2D<float4> OldState, uint3 position)
 {
     // we do the entire state update, then the correct kernel just reads the result- but the voids function like for loops
     // so we have to have this happen first and only once somehow
     // basically the entire (for x, for y part has happened already ny the time we're touching this
     // but my implementation had 3 different for loops, in this we would have to do them in one...
     // if we skip assigning update since that's controlled by kernel......
-    int liveNeighbors = LiveNeighbors(OldState,sampler,position);
-    if (liveNeighbors < 2 && OldState[position.x+position.y]== CellColour)
-        NewState[position.xy]; 
-    else if (liveNeighbors > 3 && OldState[position.x+position.y] == CellColour)
-        NewState[position.xy];
-    else if (liveNeighbors == 3 && OldState[position.x+position.y] != CellColour)
-        NewState[position.xy] = CellColour; 
+    int liveNeighbors = LiveNeighbors(OldState, position);
+    float check = OldState[position.xy].r+OldState[position.xy].g+OldState[position.xy].b+OldState[position.xy].a;
+    if (liveNeighbors < 2 && check != Dead)
+        return  DeadColour;
+    else if (liveNeighbors > 3 && check != Dead)
+        return  DeadColour;
+    else if (liveNeighbors == 3 && check == Dead)
+        return  CellColour;
     else
     {
-        //NewState[position.xy] = OldState[position.x+position.y];
+        return  OldState[position.xy].rgba;
     }
-    return NewState[position.xy];
 }
 
+float1 CellSim2(RWTexture2D<float4> NewColour,RWTexture2D<float1> OldState, uint3 position)
+{
+    // we do the entire state update, then the correct kernel just reads the result- but the voids function like for loops
+    // so we have to have this happen first and only once somehow
+    // basically the entire (for x, for y part has happened already ny the time we're touching this
+    // but my implementation had 3 different for loops, in this we would have to do them in one...
+    // if we skip assigning update since that's controlled by kernel......
+    int liveNeighbors = LiveNeighbors2(OldState, position);
+    if (liveNeighbors < 2 && OldState[position.xy] != 0)
+    { NewColour[position.xy] = DeadColour; return 0;}
+    else if (liveNeighbors > 3 && OldState[position.xy] != 0)
+        { NewColour[position.xy] = DeadColour; return  0;}
+    else if (liveNeighbors == 3 && OldState[position.xy] == 0)
+        { NewColour[position.xy] = CellColour; return  1;}
+    else
+    {
+        if(OldState[position.xy] == 1)
+            NewColour[position.xy]=CellColour;
+        else
+            NewColour[position.xy]=DeadColour;
+        return  OldState[position.xy];
+    }
+}
+float4 InitDisplayColor(RWTexture2D<float4> Texture, RWTexture2D<float1> Raw,uint3 id)
+{
+    float check = Texture[id.xy].r+Texture[id.xy].g+Texture[id.xy].b+Texture[id.xy].a;
+    if(check!=Dead)
+        Raw[id.xy]=1;
+    else
+    {
+        Raw[id.xy]=0;
+    }
+    return Texture[id.xy];
+}
 #pragma kernel InitFullTexture
 [numthreads(8, 8, 1)]
 void InitFullTexture(uint3 id : SV_DispatchThreadID)
@@ -67,6 +136,7 @@ void InitFullTexture(uint3 id : SV_DispatchThreadID)
     if (id.x % 7 == 0 || id.y % 3 == 0)
         State1[id.xy] = CellColour;
     State1[id.xy];
+    InitDisplayColor(State1,State1Raw,id);
 }
 
 #pragma kernel InitRPentomino
@@ -83,6 +153,7 @@ void InitRPentomino(uint3 id : SV_DispatchThreadID)
         State1[id.xy] = CellColour;
     if (id.x == 256 && id.y == 257)
         State1[id.xy] = CellColour;
+    InitDisplayColor(State1,State1Raw,id);
 }
 
 #pragma kernel InitAcorn
@@ -103,6 +174,7 @@ void InitAcorn(uint3 id : SV_DispatchThreadID)
         State1[id.xy] = CellColour;
     if (id.x == 253 && id.y == 257)
         State1[id.xy] = CellColour;
+    InitDisplayColor(State1,State1Raw,id);
 }
 
 #pragma kernel InitGun
@@ -181,22 +253,21 @@ void InitGun(uint3 id : SV_DispatchThreadID)
         State1[id.xy] = CellColour;
     if (id.x == 274 && id.y == 253)
         State1[id.xy] = CellColour;
+    InitDisplayColor(State1,State1Raw,id);
 }
 
 #pragma kernel Update1
 [numthreads(8, 8, 1)]
 void Update1(uint3 id : SV_DispatchThreadID)
 {
-    CellSim(State1,State2Read,samplerState2,id);
-    State1[id.xy];
+    State1Raw[id.xy]=CellSim2(State1,State2Raw,id);
+    //State1[id.xy] = CellSim(State2, id);
 }
 
 #pragma kernel Update2
 [numthreads(8, 8, 1)]
 void Update2(uint3 id : SV_DispatchThreadID)
 {
-    CellSim(State2,State1Read,samplerState1,id);
-    State2[id.xy];
+    State2Raw[id.xy] = CellSim2(State2,State1Raw,id);
+    //State2[id.xy] = CellSim2(State1Raw, id);
 }
-
-
